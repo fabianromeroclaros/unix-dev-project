@@ -9,10 +9,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#define MAX_CONNECTIONS 30
+#define MAX_CONNECTIONS 31
 #define BUFFER_SIZE 1024
 
 void handle_sigint(int sig);
+void *handle_client(void *client_socket);
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -21,8 +22,9 @@ int main(int argc, char *argv[]) {
     }
 
     int port = atoi(argv[1]);
-    int server_socket;
-    struct sockaddr_in server_addr;
+    int server_socket, client_socket;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t client_len = sizeof(client_addr);
 
     signal(SIGINT, handle_sigint);
 
@@ -49,10 +51,36 @@ int main(int argc, char *argv[]) {
 
     printf("Server is running on port %d\n", port);
 
-    while (1);
+    while (1) {
+        if ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len)) < 0) {
+            perror("Accept failed");
+            continue;
+        }
+
+        pthread_t thread;
+        if (pthread_create(&thread, NULL, handle_client, (void *)(intptr_t)client_socket) != 0) {
+            perror("Thread creation failed");
+            close(client_socket);
+        }
+    }
 
     close(server_socket);
     return 0;
+}
+
+void *handle_client(void *client_socket) {
+    int socket = (intptr_t)client_socket;
+    char buffer[BUFFER_SIZE];
+    int bytes_read;
+
+    while ((bytes_read = read(socket, buffer, BUFFER_SIZE)) > 0) {
+        buffer[bytes_read] = '\0';
+        char *response = "Command received\n";
+        write(socket, response, strlen(response));
+    }
+
+    close(socket);
+    return NULL;
 }
 
 void handle_sigint(int sig) {
