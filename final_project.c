@@ -15,6 +15,8 @@
 void handle_sigint(int sig);
 void *handle_client(void *client_socket);
 
+char *service_name = "Fabian Romero’s service, v0.1";
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Please to use this, write: %s <port>\n", argv[0]);
@@ -75,8 +77,13 @@ void *handle_client(void *client_socket) {
 
     while ((bytes_read = read(socket, buffer, BUFFER_SIZE)) > 0) {
         buffer[bytes_read] = '\0';
-        char *response = "Command received\n";
-        write(socket, response, strlen(response));
+        
+        if (strncmp(buffer, "getInfo", 7) == 0) {
+            write(socket, service_name, strlen(service_name));
+        } else {
+            char *invalid_comand = "Invalid command\n";
+            write(socket, invalid_comand, strlen(invalid_comand));
+        }
     }
 
     close(socket);
