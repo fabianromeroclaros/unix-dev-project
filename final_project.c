@@ -80,6 +80,39 @@ void *handle_client(void *client_socket) {
         
         if (strncmp(buffer, "getInfo", 7) == 0) {
             write(socket, service_name, strlen(service_name));
+        } else if (strncmp(buffer, "getNumberOfPartitions", 21) == 0) {
+            FILE *fp = popen("lsblk -l | grep part | wc -l", "r");
+            if (fp == NULL) {
+                perror("popen failed");
+                close(socket);
+                return NULL;
+            }
+            fgets(buffer, BUFFER_SIZE, fp);
+            pclose(fp);
+            write(socket, buffer, strlen(buffer));
+        } else if (strncmp(buffer, "getCurrentKernelVersion", 23) == 0) {
+            FILE *fp = popen("uname -r", "r");
+            if (fp == NULL) {
+                perror("popen failed");
+                close(socket);
+                return NULL;
+            }
+            fgets(buffer, BUFFER_SIZE, fp);
+            pclose(fp);
+            write(socket, buffer, strlen(buffer));
+        } else if (strncmp(buffer, "sshdRunning", 11) == 0) {
+            FILE *fp = popen("ps ax | grep [s]shd", "r");
+            if (fp == NULL) {
+                perror("popen failed");
+                close(socket);
+                return NULL;
+            }
+            if (fgets(buffer, BUFFER_SIZE, fp) != NULL) {
+                write(socket, "true", 4);
+            } else {
+                write(socket, "false", 5);
+            }
+            pclose(fp);
         } else {
             char *invalid_comand = "Invalid command\n";
             write(socket, invalid_comand, strlen(invalid_comand));
